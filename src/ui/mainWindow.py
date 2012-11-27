@@ -1,19 +1,27 @@
 import wx
+
 from about import AboutDialog
 from options import OptionsDialog
-from filterPanel import FilterPanel
+
+import __preferences__ as preferences
+prefs = preferences.load_preferences()
 
 
-class MyMenu(wx.Frame):
+class Main(wx.Frame):
+    """Main window for browsing and filtering files."""
+
     def __init__(self, parent, id, title):
+        pref_layout = prefs['mainLayout']
+        size = wx.Size(pref_layout['width'], pref_layout['height'])
         wx.Frame.__init__(self, parent, id, title,
-            wx.DefaultPosition, wx.Size(380, 250))
+            wx.DefaultPosition, size)
+        # Save the window size for next use.
+        self.Bind(wx.EVT_SIZE, self.save_layout_preferences, self)
         self.CreateStatusBar()
 
         # Menu bar
         menubar = wx.MenuBar()
         self.SetMenuBar(menubar)
-
 
         # Top level Menus
         file = wx.Menu()
@@ -22,7 +30,7 @@ class MyMenu(wx.Frame):
         menubar.Append(help, '&Help')
 
         # File Menu Items
-        options = file.Append(wx.ID_PREFERENCES, "&Options", " Program Options")
+        options = file.Append(wx.ID_PREFERENCES, "&Options", "Program Options")
         self.Bind(wx.EVT_MENU, self.on_options, options)
         # Seperator before quit
         file.AppendSeparator()
@@ -40,18 +48,26 @@ class MyMenu(wx.Frame):
         clear_filter = wx.Button(self, -1, "Clear")
         run_filter = wx.Button(self, -1, "Run")
 
-        # Splitter Window for filters
         splitter = wx.SplitterWindow(self, -1)
+        # Splitter subpanels
         left = wx.Panel(splitter, wx.EXPAND)
         self.nb = wx.Notebook(splitter)
+
+        # Splitter Window for filters
+        splitter.SplitVertically(left, self.nb)
+        splitter.SetSashGravity(0)
+        splitter.SetMinimumPaneSize(50)
+        splitter.SetSashPosition(pref_layout['dividerPosition'])
+        self.Bind(wx.EVT_SPLITTER_SASH_POS_CHANGED,
+                  self.save_layout_preferences, splitter)
 
         # Notebook pages for various
         self.nb.AddPage(FilterPanel(self.nb, wx.EXPAND), "All Files")
         pages = [('Images', None), ('Videos', None), ("Text Documents", None)]
         for title, filter_string in pages:
-            self.nb.AddPage(FilterPanel(self.nb, wx.EXPAND, filter_string=filter_string), title)
+            panel = FilterPanel(self.nb, wx.EXPAND, filter_string=filter_string)
+            self.nb.AddPage(panel, title)
 
-        splitter.SplitVertically(left, self.nb)
 
         # Place items in Grid
         sizer = wx.GridBagSizer(2, 2)
@@ -66,21 +82,33 @@ class MyMenu(wx.Frame):
         self.Centre()
 
     def update_tabs(self, pages):
-        """Update the existing tabs, changing their filter strings or creating 
+        """Update the existing tabs, changing their filter strings or creating
 them if they do not exist."""
         for title, filter_string in pages:
-            pass
-
+            self.nb.AddPage()
 
     def on_about(self, event):
+        """Show the about box"""
         dlg = AboutDialog(self, -1, "About")
         dlg.ShowModal()
         dlg.Destroy()
 
     def on_options(self, event):
+        """Show the options dialog"""
         dlg = OptionsDialog(self, -1, "Options")
         dlg.ShowModal()
         dlg.Destroy()
 
     def on_close(self, event):
         self.Close()
+
+    def save_layout_preferences(self, event):
+        """Save the splitter sash position to preferences file."""
+        pass
+        # Include conditional logic to check if maximized.
+
+
+class FilterPanel(wx.Panel):
+    def __init__(self, parent, ID, filter_string=None):
+        wx.Panel.__init__(self, parent, ID, wx.DefaultPosition)
+        self.filter_string = filter_string

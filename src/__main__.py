@@ -1,11 +1,11 @@
 import wx
 
-from ui.mainWindow import MyMenu
+from ui.mainWindow import Main
 
 
 class MyApp(wx.App):
     def OnInit(self):
-        frame = MyMenu(None, -1, 'toolbar.py')
+        frame = Main(None, -1, 'toolbar.py')
         frame.Show(True)
         return True
 
